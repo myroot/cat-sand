@@ -1,0 +1,36 @@
+name: Coupang Price Tracker
+
+on:
+  schedule:
+    # 매일 6시간 간격으로 실행 (UTC 기준 0, 6, 12, 18시) → 한국시간 오전 9시, 오후 3시, 오후 9시, 새벽 3시
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch: # Actions 탭에서 수동으로 실행 가능토록 함
+
+jobs:
+  track-price:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write    # 이슈를 생성하고 코멘트를 쓰기 위한 권한
+      contents: read   # 코드 체크아웃을 위한 권한
+
+    steps:
+      - name: 저장소 체크아웃 (Checkout repository)
+        uses: actions/checkout@v4
+
+      - name: Python 환경 설정 (Set up Python)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 필요 패키지 설치 (Install dependencies)
+        run: pip install -r requirements.txt
+
+      - name: 스크래퍼 파이썬 스크립트 실행 (Run scraper)
+        env:
+          # GitHub Actions 자체에서 제공되는 임시 토큰
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 텔레그램 봇 시크릿 (Repository Secrets에 추가 필요!)
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scraper.py
