@@ -22,8 +22,16 @@ def get_product_price():
         
         # 페이지 요소를 찾기 위해 대기 (최대 15초)
         try:
-            sb.wait_for_element_visible(".total-price > strong, .prod-price .total-price strong, .price-value", timeout=15)
-            price_str = sb.get_text(".total-price > strong, .prod-price .total-price strong, .price-value")
+            # 새로운 쿠팡 페이지 구조에 맞춘 클래스명들 (.sales-price-amount, .final-price-amount)
+            selectors = ".final-price-amount, .sales-price-amount, .total-price > strong, .prod-price .total-price strong, .price-value"
+            sb.wait_for_element_visible(selectors, timeout=15)
+            # 가장 유리한 혜택가(final-price-amount) 가 있으면 먼저 시도하고 없으면 쿠팡판매가(sales-price-amount)를 가져옴
+            if sb.is_element_visible(".final-price-amount"):
+                price_str = sb.get_text(".final-price-amount")
+            elif sb.is_element_visible(".sales-price-amount"):
+                price_str = sb.get_text(".sales-price-amount")
+            else:
+                price_str = sb.get_text(selectors)
         except Exception as e:
             # 봇 차단 페이지거나 구조가 변경된 경우
             page_title = sb.get_title()
