@@ -1,9 +1,8 @@
 import os
 import re
 from datetime import datetime
-from curl_cffi import requests as cffi_requests
+from seleniumbase import SB
 import requests
-from bs4 import BeautifulSoup
 
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 GITHUB_REPOSITORY = os.environ.get('GITHUB_REPOSITORY')
@@ -14,31 +13,32 @@ PRODUCT_URL = "https://www.coupang.com/vp/products/7151451350"
 ISSUE_TITLE = "캐너디언 샌드 9kg 2개 가격 추적 (Cat Sand Price History)"
 
 def get_product_price():
-    # 쿠팡의 차단 정책을 우회하기 위해 curl_cffi의 chrome impersonation 기능 사용
-    response = cffi_requests.get(PRODUCT_URL, impersonate="chrome110", timeout=15)
-    
-    if response.status_code != 200:
-        raise Exception(f"페이지 로드 실패: {response.status_code}")
+    # 쿠팡의 차단 정책을 우회하기 위해 SeleniumBase의 Undetected Chromedriver 사용
+    # GitHub Actions 환경을 고려하여 headless=True 설정
+    with SB(uc=True, headless=True) as sb:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 쿠팡 상품 페이지 접속 중...")
+        # uc_open_with_reconnect는 봇 탐지를 회피하기 위해 필요시 재연결을 시도합니다.
+        sb.uc_open_with_reconnect(PRODUCT_URL, reconnect_time=4)
         
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # 쿠팡의 다양한 가격 표시 클래스 시도
-    price_element = soup.select_one('span.total-price > strong')
-    if not price_element:
-        price_element = soup.select_one('.prod-price .total-price strong')
-    if not price_element:
-        price_element = soup.select_one('.price-value')
+        # 페이지 요소를 찾기 위해 대기 (최대 15초)
+        try:
+            sb.wait_for_element_visible(".total-price > strong, .prod-price .total-price strong, .price-value", timeout=15)
+            price_str = sb.get_text(".total-price > strong, .prod-price .total-price strong, .price-value")
+        except Exception as e:
+            # 봇 차단 페이지거나 구조가 변경된 경우
+            page_title = sb.get_title()
+            raise Exception(f"페이지에서 가격 요소를 찾을 수 없습니다. (구조 변경 또는 차단 의심). 현재 페이지 제목: {page_title}. 오류: {e}")
+            
+        if not price_str:
+            raise Exception("가격 텍스트가 비어 있습니다.")
+            
+        price_str = price_str.strip().replace(',', '')
+        price_match = re.search(r'\d+', price_str)
         
-    if not price_element:
-        raise Exception("페이지에서 가격 요소를 찾을 수 없습니다. (구조 변경 또는 차단 의심)")
-        
-    price_str = price_element.text.strip().replace(',', '')
-    price_match = re.search(r'\d+', price_str)
-    
-    if not price_match:
-        raise Exception(f"가격을 파싱할 수 없습니다: {price_str}")
-        
-    return int(price_match.group())
+        if not price_match:
+            raise Exception(f"가격을 파싱할 수 없습니다: {price_str}")
+            
+        return int(price_match.group())
 
 def get_or_create_issue():
     headers = {
