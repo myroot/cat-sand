@@ -33,4 +33,5 @@ jobs:
           # 텔레그램 봇 시크릿 (Repository Secrets에 추가 필요!)
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONIOENCODING: utf-8
         run: python scraper.py
