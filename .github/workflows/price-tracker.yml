@@ -8,7 +8,7 @@ on:
 
 jobs:
   track-price:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     permissions:
       issues: write    # 이슈를 생성하고 코멘트를 쓰기 위한 권한
       contents: read   # 코드 체크아웃을 위한 권한
